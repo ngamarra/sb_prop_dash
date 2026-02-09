@@ -152,6 +152,7 @@ def normalize_description(value: object) -> str:
 BOARD_DESC_ALIASES = {
     normalize_description(k): v for k, v in BOARD_DESC_ALIASES_RAW.items()
 }
+PICK_TOKEN_SET = {"O", "U", "H", "T", "SEA", "NE", "Y", "N"}
 
 
 def pick_column(columns: Iterable[object], preferred: list[str]) -> object | None:
@@ -239,6 +240,44 @@ def parse_choice_tokens(value: object) -> set[str]:
     return {token for token in normalized if token}
 
 
+def build_allowed_by_qid(master_df: pd.DataFrame) -> dict[str, set[str]]:
+    allowed_by_qid: dict[str, set[str]] = {}
+    for row in master_df.itertuples(index=False):
+        qid = str(row.question_id)
+        allowed_by_qid[qid] = parse_choice_tokens(getattr(row, "choices", ""))
+    return allowed_by_qid
+
+
+def score_answer_candidate(parsed: pd.DataFrame, master_df: pd.DataFrame) -> tuple[int, int, int, int]:
+    if parsed is None or parsed.empty:
+        return (0, 0, 0, 0)
+
+    master_ids = set(master_df["question_id"].astype(str))
+    allowed_by_qid = build_allowed_by_qid(master_df)
+
+    frame = parsed.copy()
+    frame["question_id"] = frame["question_id"].astype(str)
+    frame["answer"] = frame["answer"].fillna("").astype(str)
+    frame = frame[frame["question_id"].isin(master_ids)]
+    if frame.empty:
+        return (0, 0, 0, 0)
+
+    matched = int(frame["question_id"].nunique())
+    non_empty = int((frame["answer"] != "").sum())
+    valid = 0
+    invalid = 0
+    for row in frame.itertuples(index=False):
+        answer = str(row.answer).strip()
+        if not answer:
+            continue
+        allowed = allowed_by_qid.get(str(row.question_id), set())
+        if not allowed or answer in allowed:
+            valid += 1
+        else:
+            invalid += 1
+    return (matched, valid, non_empty, -invalid)
+
+
 def build_master_lookup(master_df: pd.DataFrame) -> tuple[dict[str, str], list[dict[str, object]]]:
     desc_to_qid: dict[str, str] = {}
     rows: list[dict[str, object]] = []
@@ -257,9 +296,29 @@ def build_master_lookup(master_df: pd.DataFrame) -> tuple[dict[str, str], list[d
     return desc_to_qid, rows
 
 
+def is_description_like_text(text: object) -> bool:
+    if pd.isna(text):
+        return False
+    raw = str(text).strip()
+    if not raw:
+        return False
+    if normalize_pick(raw) in PICK_TOKEN_SET:
+        return False
+    if re.fullmatch(r"[0-9.\-+]+", raw):
+        return False
+
+    letters = sum(1 for ch in raw if ch.isalpha())
+    if letters < 3:
+        return False
+    return len(normalize_description(raw)) >= 4
+
+
 def match_question_id_from_description(
     text: object, desc_to_qid: dict[str, str], master_rows: list[dict[str, object]]
 ) -> str | None:
+    if not is_description_like_text(text):
+        return None
+
     desc_norm = normalize_description(text)
     if not desc_norm:
         return None
@@ -277,7 +336,7 @@ def match_question_id_from_description(
             or str(row["desc_norm"]) in desc_norm
         )
     ]
-    if contains_hits:
+    if contains_hits and len(desc_norm) >= 6:
         contains_hits.sort(key=lambda r: len(str(r["desc_norm"])), reverse=True)
         return str(contains_hits[0]["question_id"])
 
@@ -291,7 +350,7 @@ def match_question_id_from_description(
         if ratio > best_score:
             best_score = ratio
             best_qid = str(row["question_id"])
-    if best_qid and best_score >= 0.86:
+    if best_qid and best_score >= 0.90 and len(desc_norm) >= 8:
         return best_qid
     return None
 
@@ -390,13 +449,41 @@ def to_answer_key(df: pd.DataFrame) -> pd.DataFrame | None:
 
 
 def parse_answer_key_frame(frame: pd.DataFrame, master_df: pd.DataFrame) -> pd.DataFrame | None:
+    candidates: list[pd.DataFrame] = []
     direct = to_answer_key(frame)
     if direct is not None and not direct.empty:
-        return direct
+        candidates.append(direct)
     board = to_answer_key_from_board(frame, master_df)
     if board is not None and not board.empty:
-        return board
-    return None
+        candidates.append(board)
+
+    if not candidates:
+        return None
+
+    ranked = sorted(
+        ((score_answer_candidate(candidate, master_df), candidate) for candidate in candidates),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    return ranked[0][1]
+
+
+def pick_best_answer_candidate(
+    candidates: list[tuple[str, pd.DataFrame]], master_df: pd.DataFrame
+) -> tuple[pd.DataFrame | None, str]:
+    if not candidates:
+        return None, ""
+
+    ranked = sorted(
+        (
+            (score_answer_candidate(parsed, master_df), parsed, source)
+            for source, parsed in candidates
+        ),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    best = ranked[0]
+    return best[1], best[2]
 
 
 def build_google_candidates(url: str) -> list[str]:
@@ -428,12 +515,16 @@ def load_answer_key(
     if uploaded_answer is not None:
         name = uploaded_answer.name.lower()
         try:
+            candidates: list[tuple[str, pd.DataFrame]] = []
             if name.endswith(".xlsx"):
                 excel = pd.read_excel(uploaded_answer, sheet_name=None)
                 for sheet_name, frame in excel.items():
                     parsed = parse_answer_key_frame(frame, master_df)
                     if parsed is not None and not parsed.empty:
-                        return parsed, [], f"Uploaded file ({uploaded_answer.name} / {sheet_name})"
+                        candidates.append((f"Uploaded file ({uploaded_answer.name} / {sheet_name})", parsed))
+                best_df, best_source = pick_best_answer_candidate(candidates, master_df)
+                if best_df is not None:
+                    return best_df, [], best_source
                 return None, [f"{uploaded_answer.name}: no answer key detected in any sheet."], ""
             frame = pd.read_csv(uploaded_answer)
             parsed = parse_answer_key_frame(frame, master_df)
@@ -448,12 +539,16 @@ def load_answer_key(
         if not path.exists():
             return None, [f"Answer file not found: {path}"], ""
         try:
+            candidates: list[tuple[str, pd.DataFrame]] = []
             if path.suffix.lower() == ".xlsx":
                 excel = pd.read_excel(path, sheet_name=None)
                 for sheet_name, frame in excel.items():
                     parsed = parse_answer_key_frame(frame, master_df)
                     if parsed is not None and not parsed.empty:
-                        return parsed, [], f"Local file ({path} / {sheet_name})"
+                        candidates.append((f"Local file ({path} / {sheet_name})", parsed))
+                best_df, best_source = pick_best_answer_candidate(candidates, master_df)
+                if best_df is not None:
+                    return best_df, [], best_source
                 return None, [f"{path}: no answer key detected in any sheet."], ""
             frame = pd.read_csv(path)
             parsed = parse_answer_key_frame(frame, master_df)
@@ -464,12 +559,13 @@ def load_answer_key(
             return None, [f"{path}: failed to load ({exc})."], ""
 
     errors: list[str] = []
+    candidates: list[tuple[str, pd.DataFrame]] = []
     for candidate in build_google_candidates(answer_url):
         try:
             csv_df = pd.read_csv(candidate)
             parsed = parse_answer_key_frame(csv_df, master_df)
             if parsed is not None and not parsed.empty:
-                return parsed, errors, candidate
+                candidates.append((candidate, parsed))
             errors.append(f"{candidate}: CSV loaded but no answer key detected.")
         except Exception as exc:
             errors.append(f"{candidate}: CSV load failed ({exc}).")
@@ -479,11 +575,14 @@ def load_answer_key(
             for idx, table in enumerate(html_tables):
                 parsed = parse_answer_key_frame(table, master_df)
                 if parsed is not None and not parsed.empty:
-                    return parsed, errors, f"{candidate} (table {idx + 1})"
+                    candidates.append((f"{candidate} (table {idx + 1})", parsed))
             errors.append(f"{candidate}: HTML tables loaded but no answer key detected.")
         except Exception as exc:
             errors.append(f"{candidate}: HTML parse failed ({exc}).")
 
+    best_df, best_source = pick_best_answer_candidate(candidates, master_df)
+    if best_df is not None:
+        return best_df, errors, best_source
     return None, errors, ""
 
 
@@ -547,9 +646,21 @@ def score_board(
     master_df: pd.DataFrame, answers_df: pd.DataFrame, picks_df: pd.DataFrame
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     picks_df = picks_df.drop_duplicates(["participant", "question_id"], keep="last")
+    allowed_by_qid = build_allowed_by_qid(master_df)
+
     questions = master_df[["question_id", "description", "choices"]].copy()
     questions = questions.merge(answers_df[["question_id", "answer"]], on="question_id", how="left")
     questions["answer"] = questions["answer"].fillna("")
+    questions["answer"] = questions.apply(
+        lambda row: row["answer"]
+        if (
+            row["answer"] == ""
+            or not allowed_by_qid.get(str(row["question_id"]), set())
+            or row["answer"] in allowed_by_qid.get(str(row["question_id"]), set())
+        )
+        else "",
+        axis=1,
+    )
 
     participants = sorted(picks_df["participant"].dropna().astype(str).unique().tolist())
     if not participants:
