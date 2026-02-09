@@ -60,6 +60,15 @@ Use sidebar controls:
 
 When answer source is `Local answer file`, each refresh cycle re-reads that path/upload.
 
+## Multi-Year Tabs
+
+The app is tabbed by year. Configure defaults in:
+- `/Users/ngamarra/Documents/GitHub/sb_prop_dash/app.py` (`YEAR_CONFIGS`)
+
+Each year tab can point at its own:
+- Google Sheet URL or local answer file
+- participant folder (recommended: `participants/<year>`)
+
 ## Output
 
 - Live leaderboard (`correct`, `incorrect`, `pending`, `no_pick`, `accuracy`, `completion`)
@@ -67,3 +76,4 @@ When answer source is `Local answer file`, each refresh cycle re-reads that path
 - CSV downloads for:
   - participant template
   - leaderboard
+- Visualizations (points, status breakdown, accuracy vs completion)

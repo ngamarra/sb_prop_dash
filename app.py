@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 import pandas as pd
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
+import plotly.express as px
 
 DEFAULT_ANSWER_URL = (
     "https://docs.google.com/spreadsheets/d/"
@@ -17,6 +18,13 @@ DEFAULT_ANSWER_URL = (
     "?usp=sharing&pru=AAABnGPKwnA*sUb9cijs8-NaqcgavayiwA"
 )
 QUESTION_ID_PATTERN = re.compile(r"^Q\d{1,3}$")
+YEAR_CONFIGS = {
+    "2026": {
+        "answer_url": DEFAULT_ANSWER_URL,
+        "local_answer_path": "/Users/ngamarra/Downloads/Answers 2026.xlsx",
+        "participants_folder": "participants/2026",
+    }
+}
 
 BOARD_DESC_ALIASES_RAW = {
     "charlie puth": "Q01",
@@ -639,59 +647,49 @@ def make_template_csv(master_df: pd.DataFrame) -> bytes:
     return template.to_csv(index=False).encode("utf-8")
 
 
-def main() -> None:
-    st.set_page_config(page_title="Prop Bet Live Scorer", layout="wide")
-    st.title("Prop Bet Live Scorer")
-    st.caption("Live scoreboard for participant prop sheets.")
+def render_year_tab(year: str, master_df: pd.DataFrame, auto_refresh_enabled: bool, auto_refresh_seconds: int) -> None:
+    defaults = YEAR_CONFIGS.get(year, {})
+    st.subheader(f"{year} Answers & Picks")
 
-    st.sidebar.header("Data Sources")
-    answer_source_mode = st.sidebar.radio(
+    answer_source_mode = st.radio(
         "Answer source",
         ["Google Sheet URL", "Local answer file"],
         horizontal=True,
+        key=f"{year}_answer_mode",
     )
-    answer_url = st.sidebar.text_input("Answer sheet URL", value=DEFAULT_ANSWER_URL)
-    local_answer_path = st.sidebar.text_input(
+    answer_url = st.text_input(
+        "Answer sheet URL",
+        value=defaults.get("answer_url", DEFAULT_ANSWER_URL),
+        key=f"{year}_answer_url",
+    )
+    local_answer_path = st.text_input(
         "Local answer file path",
-        value="/Users/ngamarra/Downloads/Answers 2026.xlsx",
+        value=defaults.get("local_answer_path", ""),
+        key=f"{year}_answer_path",
     )
-    uploaded_answer = st.sidebar.file_uploader(
-        "Upload answer file (CSV/XLSX)", type=["csv", "xlsx"]
+    uploaded_answer = st.file_uploader(
+        "Upload answer file (CSV/XLSX)",
+        type=["csv", "xlsx"],
+        key=f"{year}_answer_upload",
     )
 
-    uploaded_master = st.sidebar.file_uploader("Master questions CSV", type=["csv"])
-    master_path = st.sidebar.text_input("Or local master CSV path", value="data/props_master.csv")
-
-    source_mode = st.sidebar.radio("Participant source", ["Folder", "Uploads"], horizontal=True)
-    participant_folder = st.sidebar.text_input("Participant folder", value="participants")
-    uploaded_participants = st.sidebar.file_uploader(
-        "Participant CSV files", type=["csv"], accept_multiple_files=True
+    source_mode = st.radio(
+        "Participant source",
+        ["Folder", "Uploads"],
+        horizontal=True,
+        key=f"{year}_source_mode",
     )
-    st.sidebar.divider()
-    auto_refresh_enabled = st.sidebar.checkbox("Auto-refresh", value=True)
-    auto_refresh_seconds = int(
-        st.sidebar.number_input(
-            "Auto-refresh interval (seconds)",
-            min_value=5,
-            max_value=300,
-            value=20,
-            step=5,
-        )
+    participant_folder = st.text_input(
+        "Participant folder",
+        value=defaults.get("participants_folder", f"participants/{year}"),
+        key=f"{year}_participants_folder",
     )
-    if auto_refresh_enabled:
-        tick = st_autorefresh(interval=auto_refresh_seconds * 1000, key="live_refresh")
-        st.sidebar.caption(f"Live refresh active (tick {tick})")
-    refresh = st.sidebar.button("Refresh now")
-    if refresh:
-        st.rerun()
-    now = time.time()
-
-    try:
-        master_raw = pd.read_csv(uploaded_master) if uploaded_master else pd.read_csv(master_path)
-        master_df = prep_master(master_raw)
-    except Exception as exc:
-        st.error(f"Failed to load master CSV: {exc}")
-        st.stop()
+    uploaded_participants = st.file_uploader(
+        "Participant CSV files",
+        type=["csv"],
+        accept_multiple_files=True,
+        key=f"{year}_participant_upload",
+    )
 
     selected_path = ""
     selected_upload = None
@@ -707,28 +705,23 @@ def main() -> None:
         uploaded_answer=selected_upload,
     )
     if answers_df is None:
-        st.error("Could not load an answer key from the provided URL.")
+        st.error("Could not load an answer key from the provided source.")
         if answer_errors:
             with st.expander("Answer-loader errors"):
                 for err in answer_errors:
                     st.write(f"- {err}")
-        st.stop()
+        return
 
     if source_mode == "Folder":
         picks_df, participant_issues = load_participants_from_folder(participant_folder)
     else:
         picks_df, participant_issues = load_participants_from_uploads(uploaded_participants)
 
-    st.sidebar.download_button(
-        "Download participant template",
-        data=make_template_csv(master_df),
-        file_name="participant_template.csv",
-        mime="text/csv",
-    )
-
-    last_updated_epoch = now
+    last_updated_epoch = time.time()
     seconds_until_next = (
-        auto_refresh_seconds - (int(now) % auto_refresh_seconds) if auto_refresh_enabled else None
+        auto_refresh_seconds - (int(last_updated_epoch) % auto_refresh_seconds)
+        if auto_refresh_enabled
+        else None
     )
 
     left, right = st.columns([2, 1])
@@ -751,27 +744,69 @@ def main() -> None:
                 st.write(f"- {issue}")
 
     if picks_df.empty:
-        st.info("No participant picks loaded yet. Add CSVs in the selected source and click Refresh.")
-        st.stop()
+        st.info("No participant picks loaded yet. Add CSVs in the selected source.")
+        return
 
     summary_df, scored_df = score_board(master_df, answers_df, picks_df)
     if summary_df.empty:
         st.info("No scoreable participant data found.")
-        st.stop()
+        return
 
     st.subheader("Leaderboard")
     st.dataframe(summary_df, use_container_width=True)
     st.download_button(
         "Download leaderboard CSV",
         data=summary_df.reset_index().to_csv(index=False).encode("utf-8"),
-        file_name="leaderboard.csv",
+        file_name=f"leaderboard_{year}.csv",
         mime="text/csv",
+        key=f"{year}_leaderboard_download",
     )
 
+    st.subheader("Visualizations")
+    chart_cols = st.columns(2)
+
+    bar_df = summary_df.reset_index()[["participant", "points"]].copy()
+    bar_fig = px.bar(
+        bar_df,
+        x="participant",
+        y="points",
+        title="Points by Participant",
+        color="participant",
+    )
+    chart_cols[0].plotly_chart(bar_fig, use_container_width=True)
+
+    status_counts = (
+        scored_df.groupby(["participant", "status"])
+        .size()
+        .reset_index(name="count")
+        .sort_values("participant")
+    )
+    status_fig = px.bar(
+        status_counts,
+        x="participant",
+        y="count",
+        color="status",
+        title="Status Breakdown",
+        barmode="stack",
+    )
+    chart_cols[1].plotly_chart(status_fig, use_container_width=True)
+
+    scatter_df = summary_df.reset_index()[["participant", "accuracy", "completion", "points"]].copy()
+    scatter_fig = px.scatter(
+        scatter_df,
+        x="completion",
+        y="accuracy",
+        size="points",
+        color="participant",
+        title="Accuracy vs Completion",
+        labels={"completion": "Completion (%)", "accuracy": "Accuracy (%)"},
+    )
+    st.plotly_chart(scatter_fig, use_container_width=True)
+
     st.subheader("Participant Detail")
-    selected = st.selectbox("Participant", summary_df["participant"].tolist())
+    selected = st.selectbox("Participant", summary_df["participant"].tolist(), key=f"{year}_participant_select")
     detail = scored_df[scored_df["participant"] == selected].copy()
-    only_open = st.checkbox("Only show non-correct rows", value=True)
+    only_open = st.checkbox("Only show non-correct rows", value=True, key=f"{year}_only_open")
     if only_open:
         detail = detail[detail["status"] != "CORRECT"]
 
@@ -779,6 +814,54 @@ def main() -> None:
     detail["_q_num"] = detail["question_id"].str.extract(r"Q(\d+)", expand=False).astype(int)
     detail = detail.sort_values("_q_num").drop(columns="_q_num")
     st.dataframe(detail, use_container_width=True, hide_index=True)
+
+
+def main() -> None:
+    st.set_page_config(page_title="Prop Bet Live Scorer", layout="wide")
+    st.title("Prop Bet Live Scorer")
+    st.caption("Live scoreboard for participant prop sheets.")
+
+    st.sidebar.header("Data Sources")
+    uploaded_master = st.sidebar.file_uploader("Master questions CSV", type=["csv"])
+    master_path = st.sidebar.text_input("Or local master CSV path", value="data/props_master.csv")
+
+    st.sidebar.divider()
+    auto_refresh_enabled = st.sidebar.checkbox("Auto-refresh", value=True)
+    auto_refresh_seconds = int(
+        st.sidebar.number_input(
+            "Auto-refresh interval (seconds)",
+            min_value=5,
+            max_value=300,
+            value=20,
+            step=5,
+        )
+    )
+    if auto_refresh_enabled:
+        tick = st_autorefresh(interval=auto_refresh_seconds * 1000, key="live_refresh")
+        st.sidebar.caption(f"Live refresh active (tick {tick})")
+    refresh = st.sidebar.button("Refresh now")
+    if refresh:
+        st.rerun()
+
+    try:
+        master_raw = pd.read_csv(uploaded_master) if uploaded_master else pd.read_csv(master_path)
+        master_df = prep_master(master_raw)
+    except Exception as exc:
+        st.error(f"Failed to load master CSV: {exc}")
+        st.stop()
+
+    st.sidebar.download_button(
+        "Download participant template",
+        data=make_template_csv(master_df),
+        file_name="participant_template.csv",
+        mime="text/csv",
+    )
+
+    years = list(YEAR_CONFIGS.keys()) or ["2026"]
+    tabs = st.tabs(years)
+    for tab, year in zip(tabs, years):
+        with tab:
+            render_year_tab(year, master_df, auto_refresh_enabled, auto_refresh_seconds)
 
 
 if __name__ == "__main__":
