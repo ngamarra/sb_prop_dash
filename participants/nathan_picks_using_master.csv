@@ -1,0 +1,68 @@
+person,question_id,description,choices,Unnamed: 3,pick
+Nathan,Q01,National anthem 119.5s,O/U,,
+Nathan,Q02,Coin Toss,H/T,,SEA
+Nathan,Q03,Winner of coin toss,SEA/NE,,U
+Nathan,Q04,Q1 Points 7.5,O/U,,SEA
+Nathan,Q05,Q2 Points 13.5,O/U,,NE
+Nathan,Q06,Q3 Points 9.5,O/U,,T
+Nathan,Q07,Q4 Points 12.5,O/U,,NE
+Nathan,Q08,Game Total 45.5,O/U,,NE
+Nathan,Q09,Total TDs 5.5,O/U,,NE
+Nathan,Q10,Total FGs 3.5,O/U,,NE
+Nathan,Q11,Total INTs 1.5,O/U,,O
+Nathan,Q12,Total FUMs lost 1.5,O/U,,O
+Nathan,Q13,Total Sacks 5.5,O/U,,Y
+Nathan,Q14,Total Punts 7.5,O/U,,O
+Nathan,Q15,Total FDOWNS 39.5,O/U,,Y
+Nathan,Q16,Sam Arnold Completions 19.5,O/U,,U
+Nathan,Q17,Kennet Walker III Rush Yards 73.5,O/U,,Y
+Nathan,Q18,Jaxon Smith-Njigba receptions 6.5,O/U,,O
+Nathan,Q19,Cooper Kupp touchdowns 0.5,O/U,,N
+Nathan,Q20,Rashid Shaheed receiving yards 21.5,O/U,,O
+Nathan,Q21,Sam Darnold passing yards 231.5,O/U,,N
+Nathan,Q22,Ernest Jones IV solo + assisted tackles 8.5,O/U,,O
+Nathan,Q23,DeMarcus Lawrence sacks 0.5,O/U,,N
+Nathan,Q24,AJ Barner receiving yards 26.5,O/U,,O
+Nathan,Q25,Jason Myers kicking points 8.5,O/U,,O
+Nathan,Q26,Drake Maye rushing yards 36.5,O/U,,U
+Nathan,Q27,Rhamondre Stevenson rushing yards 49.5,O/U,,Y
+Nathan,Q28,Kayshon Boutte receiving yards 31.5,O/U,,O
+Nathan,Q29,Hunter Henry receptions 3.5,O/U,,N
+Nathan,Q30,Stefon Diggs receptions 4.5,O/U,,O
+Nathan,Q31,Craig Woodson solo + assisted tackles 5.5,O/U,,Y
+Nathan,Q32,K'lavon Chaisson sacks 0.5,O/U,,N
+Nathan,Q33,Treveyon Henderson touchdowns 0.5,O/U,,N
+Nathan,Q34,Drake Maye rushing touchdowns 0.5,O/U,,O
+Nathan,Q35,Andy Borregales kicking points 6.5,O/U,,Y
+Nathan,Q36,First TD ,SEA/NE,,U
+Nathan,Q37,First FG,SEA/NE,,Y
+Nathan,Q38,First Turnover,SEA/NE,,O
+Nathan,Q39,First Timeout,SEA/NE,,Y
+Nathan,Q40,First Punt,SEA/NE,,O
+Nathan,Q41,First Sack,SEA/NE,,Y
+Nathan,Q42,First play from scrimmage is a rushing attempt?,Y/N,,O
+Nathan,Q43,A player gains 10 or more yards on one play?,Y/N,,N
+Nathan,Q44,Team crosses midfield (passes 50 yard line)?,Y/N,,O
+Nathan,Q45,First song “LA MuDANZA”,Y/N,,N
+Nathan,Q46,Special guest appearance by Cardi B?,Y/N,,O
+Nathan,Q47,Sam Darnold completes first 2 pass attempts?,Y/N,,N
+Nathan,Q48,Will the game be tied after 0-0?,Y/N,,O
+Nathan,Q49,Either team scores in first 6.5 minutes of the game?,Y/N,,Y
+Nathan,Q50,3 total players to have a passing attempt?,Y/N,,O
+Nathan,Q51,Will there be a missed field goal?,Y/N,,Y
+Nathan,Q52,New England commits first accepted penalty?,Y/N,,U
+Nathan,Q53,Special teams or defensive touchdown?,Y/N,,N
+Nathan,Q54,Will Seattle have the lead at halftime?,Y/N,,N
+Nathan,Q55,New England scores first after halftime?,Y/N,,O
+Nathan,Q56,Safety?,Y/N,,SEA
+Nathan,Q57,4th down conversion for a touchdown?,Y/N,,O
+Nathan,Q58,Will there be a successful 2 pt conversion?,Y/N,,SEA
+Nathan,Q59,Will either team kick a field goal in the 3rd quarter?,Y/N,,O
+Nathan,Q60,Points scored with under 2 minutes left in game?,Y/N,,O
+Nathan,Q61,Will there be a missed extra point kick?,Y/N,,O
+Nathan,Q62,Will there be overtime?,Y/N,,O
+Nathan,Q63,SB Champion?,SEA/NE,,U
+Nathan,Q64,Covers point spread? SEA+4.5,SEA/NE,,U
+Nathan,Q65,QB MVP?,Y/N,,O
+Nathan,Q66,Gatorade Color,BG/OY/CL/RP/NO,,O
+Nathan,Q67,Write-in score,,,

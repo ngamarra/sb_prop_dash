@@ -1,0 +1,6 @@
+streamlit>=1.31
+streamlit-autorefresh>=1.0.1
+pandas>=2.0
+openpyxl>=3.1
+lxml>=4.9
+html5lib>=1.1
