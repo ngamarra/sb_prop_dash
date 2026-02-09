@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import time
+import random
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Iterable
@@ -277,6 +278,202 @@ def score_answer_candidate(parsed: pd.DataFrame, master_df: pd.DataFrame) -> tup
             invalid += 1
     return (matched, valid, non_empty, -invalid)
 
+
+def ordered_options(options: set[str]) -> list[str]:
+    base_order = ["O", "U", "H", "T", "Y", "N", "SEA", "NE", "BG", "OY", "CL", "RP", "NO"]
+    present = [token for token in base_order if token in options]
+    extras = sorted(token for token in options if token not in set(base_order))
+    return present + extras
+
+
+def unresolved_question_options(scored_df: pd.DataFrame) -> pd.DataFrame:
+    unresolved = scored_df[scored_df["answer"] == ""].copy()
+    if unresolved.empty:
+        return pd.DataFrame(columns=["question_id", "description", "choices", "options"])
+
+    rows = (
+        unresolved.groupby("question_id", as_index=False)
+        .agg(description=("description", "first"), choices=("choices", "first"))
+        .copy()
+    )
+    options_col: list[list[str]] = []
+    for row in rows.itertuples(index=False):
+        opts = parse_choice_tokens(getattr(row, "choices", ""))
+        if not opts:
+            picks = set(
+                unresolved[unresolved["question_id"] == getattr(row, "question_id")]["pick"]
+                .astype(str)
+                .str.strip()
+                .tolist()
+            )
+            opts = {token for token in picks if token}
+        options_col.append(ordered_options(opts))
+    rows["options"] = options_col
+    rows = rows[rows["options"].map(len) > 0]
+    return rows.sort_values("question_id").reset_index(drop=True)
+
+
+def rank_from_points(points_df: pd.DataFrame) -> dict[str, int]:
+    ranked = points_df.sort_values(["points", "participant"], ascending=[False, True]).reset_index(drop=True)
+    ranked["rank"] = ranked.index + 1
+    return dict(zip(ranked["participant"], ranked["rank"]))
+
+
+def build_forced_answers(answers_df: pd.DataFrame, question_id: str, forced_answer: str) -> pd.DataFrame:
+    out = answers_df.copy()
+    out["question_id"] = out["question_id"].map(normalize_question_id)
+    out["answer"] = out["answer"].map(normalize_pick)
+    qid = normalize_question_id(question_id)
+    forced = normalize_pick(forced_answer)
+    if (out["question_id"] == qid).any():
+        out.loc[out["question_id"] == qid, "answer"] = forced
+    else:
+        out = pd.concat(
+            [out, pd.DataFrame([{"question_id": qid, "answer": forced}])],
+            ignore_index=True,
+        )
+    return out
+
+
+def compute_win_probabilities(
+    scored_df: pd.DataFrame, simulations: int, seed: int
+) -> pd.DataFrame:
+    participants = sorted(scored_df["participant"].dropna().astype(str).unique().tolist())
+    if not participants:
+        return pd.DataFrame()
+
+    current_points_df = (
+        scored_df.groupby("participant", as_index=False)["points"].sum().rename(columns={"points": "points"})
+    )
+    current_points_df = current_points_df.set_index("participant").reindex(participants).fillna(0).astype(int)
+    base_points = [int(current_points_df.loc[p, "points"]) for p in participants]
+    participant_idx = {p: idx for idx, p in enumerate(participants)}
+
+    unresolved = scored_df[scored_df["answer"] == ""].copy()
+    question_meta = unresolved_question_options(scored_df)
+    if unresolved.empty or question_meta.empty:
+        out = pd.DataFrame({"participant": participants, "win_prob": 0.0, "expected_points": base_points})
+        if base_points:
+            best = max(base_points)
+            winners = [p for p, pts in zip(participants, base_points) if pts == best]
+            for winner in winners:
+                out.loc[out["participant"] == winner, "win_prob"] = 100.0 / len(winners)
+        return out.sort_values("win_prob", ascending=False).reset_index(drop=True)
+
+    question_maps: list[tuple[list[str], dict[str, list[int]]]] = []
+    for meta in question_meta.itertuples(index=False):
+        qid = getattr(meta, "question_id")
+        options = list(getattr(meta, "options"))
+        hits: dict[str, list[int]] = {opt: [] for opt in options}
+        q_rows = unresolved[unresolved["question_id"] == qid][["participant", "pick"]]
+        for row in q_rows.itertuples(index=False):
+            participant = str(getattr(row, "participant"))
+            pick = str(getattr(row, "pick"))
+            if pick in hits and participant in participant_idx:
+                hits[pick].append(participant_idx[participant])
+        question_maps.append((options, hits))
+
+    rng = random.Random(seed)
+    win_shares = [0.0] * len(participants)
+    total_points = [0] * len(participants)
+
+    for _ in range(max(1, simulations)):
+        points = base_points.copy()
+        for options, hit_map in question_maps:
+            if not options:
+                continue
+            outcome = options[rng.randrange(len(options))]
+            for idx in hit_map.get(outcome, []):
+                points[idx] += 1
+
+        max_points = max(points)
+        winners = [idx for idx, value in enumerate(points) if value == max_points]
+        share = 1.0 / len(winners)
+        for idx in winners:
+            win_shares[idx] += share
+        for idx, value in enumerate(points):
+            total_points[idx] += value
+
+    sims = float(max(1, simulations))
+    return (
+        pd.DataFrame(
+            {
+                "participant": participants,
+                "win_prob": [round((value / sims) * 100, 2) for value in win_shares],
+                "expected_points": [round(value / sims, 2) for value in total_points],
+                "current_points": base_points,
+            }
+        )
+        .sort_values(["win_prob", "expected_points"], ascending=[False, False])
+        .reset_index(drop=True)
+    )
+
+
+def compute_leverage_props(scored_df: pd.DataFrame, summary_df: pd.DataFrame) -> pd.DataFrame:
+    unresolved = scored_df[scored_df["answer"] == ""].copy()
+    if unresolved.empty:
+        return pd.DataFrame()
+
+    options_df = unresolved_question_options(scored_df)
+    if options_df.empty:
+        return pd.DataFrame()
+
+    current_points = (
+        scored_df.groupby("participant", as_index=False)["points"].sum().rename(columns={"points": "points"})
+    )
+    current_rank = dict(zip(summary_df["participant"], summary_df.index.astype(int)))
+
+    rows: list[dict[str, object]] = []
+    for meta in options_df.itertuples(index=False):
+        qid = str(getattr(meta, "question_id"))
+        desc = str(getattr(meta, "description"))
+        options = list(getattr(meta, "options"))
+        if not options:
+            continue
+
+        q_rows = unresolved[unresolved["question_id"] == qid][["participant", "pick"]].copy()
+        hit_counts: list[int] = []
+        avg_rank_shift_values: list[float] = []
+
+        for option in options:
+            hits = int((q_rows["pick"] == option).sum())
+            hit_counts.append(hits)
+
+            sim_points = current_points.copy()
+            sim_points["points"] = sim_points["points"] + sim_points["participant"].map(
+                dict(zip(q_rows["participant"], (q_rows["pick"] == option).astype(int)))
+            ).fillna(0).astype(int)
+
+            sim_rank = rank_from_points(sim_points)
+            shifts = []
+            for participant, old_rank in current_rank.items():
+                new_rank = sim_rank.get(participant, old_rank)
+                shifts.append(abs(int(new_rank) - int(old_rank)))
+            avg_rank_shift_values.append(round(float(sum(shifts)) / max(1, len(shifts)), 3))
+
+        spread = max(hit_counts) - min(hit_counts) if hit_counts else 0
+        mean_hits = sum(hit_counts) / max(1, len(hit_counts))
+        variance = (
+            sum((value - mean_hits) ** 2 for value in hit_counts) / max(1, len(hit_counts))
+            if hit_counts
+            else 0.0
+        )
+        rows.append(
+            {
+                "question_id": qid,
+                "description": desc,
+                "options": "/".join(options),
+                "max_points_swing": spread,
+                "impact_variance": round(variance, 3),
+                "max_avg_rank_shift": max(avg_rank_shift_values) if avg_rank_shift_values else 0.0,
+                "disagreement_picks": int(q_rows[q_rows["pick"] != ""]["pick"].nunique()),
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values(
+        ["max_avg_rank_shift", "max_points_swing", "impact_variance"],
+        ascending=[False, False, False],
+    ).reset_index(drop=True)
 
 def build_master_lookup(master_df: pd.DataFrame) -> tuple[dict[str, str], list[dict[str, object]]]:
     desc_to_qid: dict[str, str] = {}
@@ -914,6 +1111,106 @@ def render_year_tab(year: str, master_df: pd.DataFrame, auto_refresh_enabled: bo
         labels={"completion": "Completion (%)", "accuracy": "Accuracy (%)"},
     )
     st.plotly_chart(scatter_fig, use_container_width=True)
+
+    st.subheader("Analytics")
+    analytics_col1, analytics_col2 = st.columns([1, 1])
+    simulations = int(
+        analytics_col1.number_input(
+            "Monte Carlo simulations",
+            min_value=200,
+            max_value=10000,
+            value=2000,
+            step=200,
+            key=f"{year}_mc_sims",
+        )
+    )
+    random_seed = int(
+        analytics_col2.number_input(
+            "Simulation seed",
+            min_value=1,
+            max_value=999999,
+            value=42,
+            step=1,
+            key=f"{year}_mc_seed",
+        )
+    )
+
+    win_prob_df = compute_win_probabilities(scored_df, simulations=simulations, seed=random_seed)
+    if not win_prob_df.empty:
+        win_cols = st.columns(2)
+        win_cols[0].dataframe(win_prob_df, use_container_width=True, hide_index=True)
+        win_fig = px.bar(
+            win_prob_df,
+            x="participant",
+            y="win_prob",
+            color="participant",
+            title="Win Probability (%)",
+            labels={"win_prob": "Win Probability %"},
+        )
+        win_cols[1].plotly_chart(win_fig, use_container_width=True)
+
+    leverage_df = compute_leverage_props(scored_df, summary_df)
+    if not leverage_df.empty:
+        st.caption("Leverage props: unresolved questions with the highest potential ranking impact.")
+        st.dataframe(leverage_df.head(15), use_container_width=True, hide_index=True)
+        lev_fig = px.bar(
+            leverage_df.head(10),
+            x="question_id",
+            y="max_avg_rank_shift",
+            color="max_points_swing",
+            title="Top Leverage Props (Rank Shift)",
+            labels={"max_avg_rank_shift": "Max Avg Rank Shift", "max_points_swing": "Points Swing"},
+        )
+        st.plotly_chart(lev_fig, use_container_width=True)
+
+    unresolved_meta = unresolved_question_options(scored_df)
+    if not unresolved_meta.empty:
+        st.caption("Scenario simulator: force one unresolved prop and inspect projected leaderboard movement.")
+        unresolved_meta = unresolved_meta.copy()
+        unresolved_meta["label"] = (
+            unresolved_meta["question_id"] + " - " + unresolved_meta["description"].astype(str)
+        )
+        scenario_question = st.selectbox(
+            "Scenario prop",
+            unresolved_meta["label"].tolist(),
+            key=f"{year}_scenario_q",
+        )
+        selected_row = unresolved_meta[unresolved_meta["label"] == scenario_question].iloc[0]
+        scenario_options = list(selected_row["options"])
+        scenario_answer = st.selectbox(
+            "Forced answer",
+            scenario_options,
+            key=f"{year}_scenario_answer",
+        )
+
+        forced_answers_df = build_forced_answers(
+            answers_df,
+            question_id=str(selected_row["question_id"]),
+            forced_answer=str(scenario_answer),
+        )
+        sim_summary_df, _ = score_board(master_df, forced_answers_df, picks_df)
+        if not sim_summary_df.empty:
+            base = summary_df.reset_index()[["rank", "participant", "points"]].rename(
+                columns={"rank": "current_rank", "points": "current_points"}
+            )
+            sim = sim_summary_df.reset_index()[["rank", "participant", "points"]].rename(
+                columns={"rank": "scenario_rank", "points": "scenario_points"}
+            )
+            delta = base.merge(sim, on="participant", how="inner")
+            delta["rank_delta"] = delta["current_rank"] - delta["scenario_rank"]
+            delta["points_delta"] = delta["scenario_points"] - delta["current_points"]
+            delta = delta.sort_values(["scenario_rank", "participant"]).reset_index(drop=True)
+
+            st.dataframe(delta, use_container_width=True, hide_index=True)
+            delta_fig = px.bar(
+                delta,
+                x="participant",
+                y="rank_delta",
+                color="points_delta",
+                title="Scenario Rank Delta (positive = moves up)",
+                labels={"rank_delta": "Rank Delta"},
+            )
+            st.plotly_chart(delta_fig, use_container_width=True)
 
     st.subheader("Participant Detail")
     selected = st.selectbox("Participant", summary_df["participant"].tolist(), key=f"{year}_participant_select")

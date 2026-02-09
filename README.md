@@ -78,3 +78,7 @@ Each year tab can point at its own:
   - participant template
   - leaderboard
 - Visualizations (points, status breakdown, accuracy vs completion)
+- Analytics:
+  - Monte Carlo win probability
+  - leverage props (highest potential rank impact)
+  - scenario simulator (force one unresolved prop)
