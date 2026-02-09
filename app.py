@@ -20,6 +20,7 @@ DEFAULT_ANSWER_URL = (
 QUESTION_ID_PATTERN = re.compile(r"^Q\d{1,3}$")
 YEAR_CONFIGS = {
     "2026": {
+        "master_path": "data/2026/props_master.csv",
         "answer_url": DEFAULT_ANSWER_URL,
         "local_answer_path": "/Users/ngamarra/Downloads/Answers 2026.xlsx",
         "participants_folder": "participants/2026",
@@ -823,7 +824,8 @@ def main() -> None:
 
     st.sidebar.header("Data Sources")
     uploaded_master = st.sidebar.file_uploader("Master questions CSV", type=["csv"])
-    master_path = st.sidebar.text_input("Or local master CSV path", value="data/props_master.csv")
+    default_master_path = YEAR_CONFIGS.get("2026", {}).get("master_path", "data/props_master.csv")
+    master_path = st.sidebar.text_input("Or local master CSV path", value=default_master_path)
 
     st.sidebar.divider()
     auto_refresh_enabled = st.sidebar.checkbox("Auto-refresh", value=True)

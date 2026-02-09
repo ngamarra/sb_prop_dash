@@ -20,7 +20,7 @@ Expected columns (flexible names are supported):
 - `description` (optional but recommended)
 - `choices` (optional but recommended)
 
-Default path in the app is `data/props_master.csv`.
+Default 2026 path in the app is `data/2026/props_master.csv`.
 
 ### 2) Answer Key (Google Sheet URL)
 
@@ -66,6 +66,7 @@ The app is tabbed by year. Configure defaults in:
 - `/Users/ngamarra/Documents/GitHub/sb_prop_dash/app.py` (`YEAR_CONFIGS`)
 
 Each year tab can point at its own:
+- master questions CSV
 - Google Sheet URL or local answer file
 - participant folder (recommended: `participants/<year>`)
 
