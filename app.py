@@ -1153,13 +1153,29 @@ def render_year_tab(year: str, master_df: pd.DataFrame, auto_refresh_enabled: bo
     if not leverage_df.empty:
         st.caption("Leverage props: unresolved questions with the highest potential ranking impact.")
         st.dataframe(leverage_df.head(15), use_container_width=True, hide_index=True)
+        leverage_top = leverage_df.head(10).copy()
+        leverage_use_rank = bool((leverage_top["max_avg_rank_shift"].abs() > 0).any())
+        lev_y = "max_avg_rank_shift" if leverage_use_rank else "max_points_swing"
+        lev_title = (
+            "Top Leverage Props (Rank Shift)"
+            if leverage_use_rank
+            else "Top Leverage Props (Points Swing)"
+        )
+        lev_labels = (
+            {"max_avg_rank_shift": "Max Avg Rank Shift", "max_points_swing": "Points Swing"}
+            if leverage_use_rank
+            else {"max_points_swing": "Max Points Swing", "max_avg_rank_shift": "Rank Shift"}
+        )
+        if not leverage_use_rank:
+            st.info("Rank impact is flat for current standings; showing points swing instead.")
         lev_fig = px.bar(
-            leverage_df.head(10),
+            leverage_top,
             x="question_id",
-            y="max_avg_rank_shift",
+            y=lev_y,
             color="max_points_swing",
-            title="Top Leverage Props (Rank Shift)",
-            labels={"max_avg_rank_shift": "Max Avg Rank Shift", "max_points_swing": "Points Swing"},
+            title=lev_title,
+            labels=lev_labels,
+            text_auto=".2f",
         )
         st.plotly_chart(lev_fig, use_container_width=True)
 
@@ -1202,13 +1218,28 @@ def render_year_tab(year: str, master_df: pd.DataFrame, auto_refresh_enabled: bo
             delta = delta.sort_values(["scenario_rank", "participant"]).reset_index(drop=True)
 
             st.dataframe(delta, use_container_width=True, hide_index=True)
+            scenario_use_rank = bool((delta["rank_delta"].abs() > 0).any())
+            delta_y = "rank_delta" if scenario_use_rank else "points_delta"
+            delta_title = (
+                "Scenario Rank Delta (positive = moves up)"
+                if scenario_use_rank
+                else "Scenario Points Delta"
+            )
+            delta_labels = (
+                {"rank_delta": "Rank Delta", "points_delta": "Points Delta"}
+                if scenario_use_rank
+                else {"points_delta": "Points Delta", "rank_delta": "Rank Delta"}
+            )
+            if not scenario_use_rank:
+                st.info("No rank movement in this scenario; showing points delta instead.")
             delta_fig = px.bar(
                 delta,
                 x="participant",
-                y="rank_delta",
+                y=delta_y,
                 color="points_delta",
-                title="Scenario Rank Delta (positive = moves up)",
-                labels={"rank_delta": "Rank Delta"},
+                title=delta_title,
+                labels=delta_labels,
+                text_auto=".2f",
             )
             st.plotly_chart(delta_fig, use_container_width=True)
 
