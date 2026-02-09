@@ -1,68 +1,68 @@
 person,question_id,description,choices,Unnamed: 3,pick
-Joe,Q01,National anthem 119.5s,O/U,,
-Joe,Q02,Coin Toss,H/T,,SEA
-Joe,Q03,Winner of coin toss,SEA/NE,,O
-Joe,Q04,Q1 Points 7.5,O/U,,NE
-Joe,Q05,Q2 Points 13.5,O/U,,SEA
-Joe,Q06,Q3 Points 9.5,O/U,,T
-Joe,Q07,Q4 Points 12.5,O/U,,SEA
-Joe,Q08,Game Total 45.5,O/U,,NE
-Joe,Q09,Total TDs 5.5,O/U,,NE
-Joe,Q10,Total FGs 3.5,O/U,,NE
-Joe,Q11,Total INTs 1.5,O/U,,U
-Joe,Q12,Total FUMs lost 1.5,O/U,,O
-Joe,Q13,Total Sacks 5.5,O/U,,Y
-Joe,Q14,Total Punts 7.5,O/U,,U
-Joe,Q15,Total FDOWNS 39.5,O/U,,Y
+Joe,Q01,National anthem 119.5s,O/U,,O
+Joe,Q02,Coin Toss,H/T,,T
+Joe,Q03,Winner of coin toss,SEA/NE,,NE
+Joe,Q04,Q1 Points 7.5,O/U,,U
+Joe,Q05,Q2 Points 13.5,O/U,,O
+Joe,Q06,Q3 Points 9.5,O/U,,U
+Joe,Q07,Q4 Points 12.5,O/U,,O
+Joe,Q08,Game Total 45.5,O/U,,O
+Joe,Q09,Total TDs 5.5,O/U,,U
+Joe,Q10,Total FGs 3.5,O/U,,O
+Joe,Q11,Total INTs 1.5,O/U,,O
+Joe,Q12,Total FUMs lost 1.5,O/U,,U
+Joe,Q13,Total Sacks 5.5,O/U,,O
+Joe,Q14,Total Punts 7.5,O/U,,O
+Joe,Q15,Total FDOWNS 39.5,O/U,,U
 Joe,Q16,Sam Arnold Completions 19.5,O/U,,O
-Joe,Q17,Kennet Walker III Rush Yards 73.5,O/U,,Y
+Joe,Q17,Kennet Walker III Rush Yards 73.5,O/U,,O
 Joe,Q18,Jaxon Smith-Njigba receptions 6.5,O/U,,O
-Joe,Q19,Cooper Kupp touchdowns 0.5,O/U,,N
-Joe,Q20,Rashid Shaheed receiving yards 21.5,O/U,,U
-Joe,Q21,Sam Darnold passing yards 231.5,O/U,,N
-Joe,Q22,Ernest Jones IV solo + assisted tackles 8.5,O/U,,O
-Joe,Q23,DeMarcus Lawrence sacks 0.5,O/U,,N
-Joe,Q24,AJ Barner receiving yards 26.5,O/U,,O
+Joe,Q19,Cooper Kupp touchdowns 0.5,O/U,,O
+Joe,Q20,Rashid Shaheed receiving yards 21.5,O/U,,O
+Joe,Q21,Sam Darnold passing yards 231.5,O/U,,U
+Joe,Q22,Ernest Jones IV solo + assisted tackles 8.5,O/U,,U
+Joe,Q23,DeMarcus Lawrence sacks 0.5,O/U,,U
+Joe,Q24,AJ Barner receiving yards 26.5,O/U,,U
 Joe,Q25,Jason Myers kicking points 8.5,O/U,,U
-Joe,Q26,Drake Maye rushing yards 36.5,O/U,,O
-Joe,Q27,Rhamondre Stevenson rushing yards 49.5,O/U,,N
+Joe,Q26,Drake Maye rushing yards 36.5,O/U,,U
+Joe,Q27,Rhamondre Stevenson rushing yards 49.5,O/U,,O
 Joe,Q28,Kayshon Boutte receiving yards 31.5,O/U,,O
-Joe,Q29,Hunter Henry receptions 3.5,O/U,,Y
+Joe,Q29,Hunter Henry receptions 3.5,O/U,,U
 Joe,Q30,Stefon Diggs receptions 4.5,O/U,,U
-Joe,Q31,Craig Woodson solo + assisted tackles 5.5,O/U,,Y
-Joe,Q32,K'lavon Chaisson sacks 0.5,O/U,,N
-Joe,Q33,Treveyon Henderson touchdowns 0.5,O/U,,N
-Joe,Q34,Drake Maye rushing touchdowns 0.5,O/U,,O
-Joe,Q35,Andy Borregales kicking points 6.5,O/U,,Y
-Joe,Q36,First TD ,SEA/NE,,O
-Joe,Q37,First FG,SEA/NE,,Y
-Joe,Q38,First Turnover,SEA/NE,,O
-Joe,Q39,First Timeout,SEA/NE,,Y
-Joe,Q40,First Punt,SEA/NE,,O
-Joe,Q41,First Sack,SEA/NE,,Y
-Joe,Q42,First play from scrimmage is a rushing attempt?,Y/N,,O
-Joe,Q43,A player gains 10 or more yards on one play?,Y/N,,N
-Joe,Q44,Team crosses midfield (passes 50 yard line)?,Y/N,,U
-Joe,Q45,First song “LA MuDANZA”,Y/N,,Y
-Joe,Q46,Special guest appearance by Cardi B?,Y/N,,U
+Joe,Q31,Craig Woodson solo + assisted tackles 5.5,O/U,,O
+Joe,Q32,K'lavon Chaisson sacks 0.5,O/U,,O
+Joe,Q33,Treveyon Henderson touchdowns 0.5,O/U,,O
+Joe,Q34,Drake Maye rushing touchdowns 0.5,O/U,,U
+Joe,Q35,Andy Borregales kicking points 6.5,O/U,,O
+Joe,Q36,First TD ,SEA/NE,,SEA
+Joe,Q37,First FG,SEA/NE,,NE
+Joe,Q38,First Turnover,SEA/NE,,SEA
+Joe,Q39,First Timeout,SEA/NE,,SEA
+Joe,Q40,First Punt,SEA/NE,,NE
+Joe,Q41,First Sack,SEA/NE,,NE
+Joe,Q42,First play from scrimmage is a rushing attempt?,Y/N,,Y
+Joe,Q43,A player gains 10 or more yards on one play?,Y/N,,Y
+Joe,Q44,Team crosses midfield (passes 50 yard line)?,Y/N,,Y
+Joe,Q45,First song “LA MuDANZA”,Y/N,,N
+Joe,Q46,Special guest appearance by Cardi B?,Y/N,,N
 Joe,Q47,Sam Darnold completes first 2 pass attempts?,Y/N,,N
-Joe,Q48,Will the game be tied after 0-0?,Y/N,,U
+Joe,Q48,Will the game be tied after 0-0?,Y/N,,Y
 Joe,Q49,Either team scores in first 6.5 minutes of the game?,Y/N,,Y
-Joe,Q50,3 total players to have a passing attempt?,Y/N,,U
-Joe,Q51,Will there be a missed field goal?,Y/N,,Y
-Joe,Q52,New England commits first accepted penalty?,Y/N,,U
-Joe,Q53,Special teams or defensive touchdown?,Y/N,,N
-Joe,Q54,Will Seattle have the lead at halftime?,Y/N,,N
-Joe,Q55,New England scores first after halftime?,Y/N,,U
-Joe,Q56,Safety?,Y/N,,SEA
-Joe,Q57,4th down conversion for a touchdown?,Y/N,,O
-Joe,Q58,Will there be a successful 2 pt conversion?,Y/N,,SEA
-Joe,Q59,Will either team kick a field goal in the 3rd quarter?,Y/N,,O
-Joe,Q60,Points scored with under 2 minutes left in game?,Y/N,,U
-Joe,Q61,Will there be a missed extra point kick?,Y/N,,U
-Joe,Q62,Will there be overtime?,Y/N,,O
-Joe,Q63,SB Champion?,SEA/NE,,O
-Joe,Q64,Covers point spread? SEA+4.5,SEA/NE,,O
-Joe,Q65,QB MVP?,Y/N,,U
-Joe,Q66,Gatorade Color,BG/OY/CL/RP/NO,,O
-Joe,Q67,Write-in score,,,
+Joe,Q50,3 total players to have a passing attempt?,Y/N,,N
+Joe,Q51,Will there be a missed field goal?,Y/N,,N
+Joe,Q52,New England commits first accepted penalty?,Y/N,,Y
+Joe,Q53,Special teams or defensive touchdown?,Y/N,,Y
+Joe,Q54,Will Seattle have the lead at halftime?,Y/N,,Y
+Joe,Q55,New England scores first after halftime?,Y/N,,Y
+Joe,Q56,Safety?,Y/N,,N
+Joe,Q57,4th down conversion for a touchdown?,Y/N,,Y
+Joe,Q58,Will there be a successful 2 pt conversion?,Y/N,,N
+Joe,Q59,Will either team kick a field goal in the 3rd quarter?,Y/N,,Y
+Joe,Q60,Points scored with under 2 minutes left in game?,Y/N,,Y
+Joe,Q61,Will there be a missed extra point kick?,Y/N,,N
+Joe,Q62,Will there be overtime?,Y/N,,N
+Joe,Q63,SB Champion?,SEA/NE,,SEA
+Joe,Q64,Covers point spread? SEA+4.5,SEA/NE,,SEA
+Joe,Q65,QB MVP?,Y/N,,N
+Joe,Q66,Gatorade Color,BG/OY/CL/RP/NO,,BG
+Joe,Q67,Write-in score,,,27-20
